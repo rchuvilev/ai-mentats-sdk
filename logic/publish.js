@@ -10,10 +10,10 @@
  *   5. Commit & push the updates repo
  *   6. Upload to itch.io via butler
  *
- * Usage:
- *   node shared/electron-publish.js --app=mentat-rbxs
- *   node shared/electron-publish.js --app=mentat-rbxs --platform=mac
- *   node shared/electron-publish.js --app=mentat-rbxs --skip-itch --skip-updates
+ * Usage, from the app directory:
+ *   npm run publish -- --app=mentat-rbxs
+ *   node sdk/logic/publish.js --app=mentat-rbxs --platform=mac
+ *   node sdk/logic/publish.js --app=mentat-rbxs --skip-itch --skip-updates
  *
  * Options:
  *   --app=<name>       Required. App key from config.updates.json
@@ -29,6 +29,49 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+const CONFIG_NAME = 'config.updates.json';
+
+/**
+ * The app directory: the one holding config.updates.json.
+ *
+ * This used to be `path.resolve(__dirname, '..')`, which was the monorepo root
+ * back when this file lived at `__shared__/scripts/`. Mounted as a submodule
+ * at `sdk/`, that resolves to `<app>/sdk`, so the script looked for
+ * config.updates.json inside the SDK and died on the first step of every app.
+ * Same class of breakage as bundle-electron.js had, and fixed the same way:
+ * walk up from this file, then fall back to the caller's cwd.
+ *
+ * @param {string} startDir  where to begin (this file's directory)
+ * @param {string} cwd       last-resort candidate
+ * @param {(p: string) => boolean} [exists]  injectable for tests
+ */
+function findAppRoot(startDir, cwd, exists = (p) => fs.existsSync(p)) {
+  let dir = path.resolve(startDir);
+  for (;;) {
+    if (exists(path.join(dir, CONFIG_NAME))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  if (exists(path.join(cwd, CONFIG_NAME))) return path.resolve(cwd);
+  throw new Error(
+    `publish: no ${CONFIG_NAME} found.\n`
+    + `  Searched upwards from ${path.resolve(startDir)} and in ${path.resolve(cwd)}.\n`
+    + '  Run this from an app directory.',
+  );
+}
+
+/** Where the bundler lives — inside this SDK, not a monorepo `shared/`. */
+function bundlerPath(dirname = __dirname) {
+  return path.join(dirname, '..', 'utils', 'bundle-electron.js');
+}
+
+module.exports = { findAppRoot, bundlerPath, CONFIG_NAME };
+
+// Only run the publish when invoked as a script, so the helpers above are
+// importable and testable.
+if (require.main !== module) return;
+
 // ─── Parse arguments ──────────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
@@ -43,15 +86,16 @@ if (!appName) { console.error('Usage: electron-publish.js --app=<name>'); proces
 
 const platform = getArg('platform') || (process.platform === 'darwin' ? 'mac' : process.platform === 'win32' ? 'win' : 'linux');
 const skipItch = hasFlag('skip-itch');
-const skipUpdates = hasFlag('skip-updates');
+let skipUpdates = hasFlag('skip-updates');
 const skipBuild = hasFlag('skip-build');
 const skipBundle = hasFlag('skip-bundle');
 const patchMode = hasFlag('patch');
 
 // ─── Load config ──────────────────────────────────────────────────────────
 
-const repoRoot = path.resolve(__dirname, '..');
-const configPath = path.join(repoRoot, 'config.updates.json');
+
+const repoRoot = findAppRoot(__dirname, process.cwd());
+const configPath = path.join(repoRoot, CONFIG_NAME);
 
 let config;
 try {
@@ -94,7 +138,10 @@ if (!skipUpdates && !pkg.build?.publish?.url) {
 
 if (!skipBundle) {
   console.log('\n=> Bundling...');
-  execSync(`node shared/bundle-electron.js ${appConfig.dir}`, { cwd: repoRoot, stdio: 'inherit' });
+  // The bundler ships with this SDK. `shared/bundle-electron.js` was the
+  // monorepo path and has not existed since the apps became separate repos.
+  execSync(`node ${JSON.stringify(bundlerPath())} ${JSON.stringify(appDir)}`,
+           { cwd: repoRoot, stdio: 'inherit' });
 }
 
 // ─── Step 3: Build ────────────────────────────────────────────────────────
@@ -122,8 +169,22 @@ if (!skipBuild) {
 
 const distDir = path.join(appDir, 'dist');
 
+// Sibling of the app, not inside it. In the monorepo, repoRoot was the parent
+// of every app so `repoRoot/app-updates-repo` was a sibling; now repoRoot IS
+// the app, and the same expression would have committed release binaries into
+// the app's own working tree. Overridable for a checkout kept elsewhere.
+const updatesRepoDir = config.updatesRepoDir
+  ? path.resolve(repoRoot, config.updatesRepoDir)
+  : path.resolve(repoRoot, '..', 'app-updates-repo');
+
+if (!skipUpdates && !fs.existsSync(updatesRepoDir)) {
+  console.warn(`\n⚠  updates repo not found at ${updatesRepoDir} — skipping steps 4 and 5.`);
+  console.warn('   Clone it there, or set "updatesRepoDir" in config.updates.json.');
+  skipUpdates = true;
+}
+
 if (!skipUpdates) {
-  const updatesDir = path.join(repoRoot, 'app-updates-repo', appConfig.updatesRepo.subdir);
+  const updatesDir = path.join(updatesRepoDir, appConfig.updatesRepo.subdir);
   if (!fs.existsSync(updatesDir)) {
     fs.mkdirSync(updatesDir, { recursive: true });
   }
@@ -149,7 +210,6 @@ if (!skipUpdates) {
   }
 
   // Commit & push updates repo
-  const updatesRepoDir = path.join(repoRoot, 'app-updates-repo');
   try {
     execSync('git add .', { cwd: updatesRepoDir, stdio: 'pipe' });
     const hasChanges = execSync('git status --porcelain', { cwd: updatesRepoDir, encoding: 'utf8' }).trim();

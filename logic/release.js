@@ -4,16 +4,43 @@
  *
  * Uploads to GitHub (gh) and itch.io (butler) from a single dist/ directory.
  *
- * Usage (from an app directory):
- *   node shared/electron-release.js
- *   node shared/electron-release.js --github-only
- *   node shared/electron-release.js --itch-only --platform=mac
+ * Usage, from the app directory:
+ *   npm run release
+ *   node sdk/logic/release.js --github-only
+ *   node sdk/logic/release.js --itch-only --platform=mac
  */
 
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+
+/**
+ * The commit range release notes are built from.
+ *
+ * With a previous tag it is everything since. Without one it used to be
+ * `HEAD~20..HEAD`, which is only a valid revision in a repo that HAS twenty
+ * commits — `git log` fails outright otherwise, the failure was swallowed, and
+ * the release went out with the generic one-line fallback instead of its real
+ * changelog. Every one of these repos is short enough to hit that: they were
+ * squashed to a single commit during the migration.
+ *
+ * `HEAD` with a count cap means "the last N, however few exist".
+ */
+function notesRange(lastTag) {
+  return lastTag ? { range: `${lastTag}..HEAD`, limit: null } : { range: 'HEAD', limit: 20 };
+}
+
+/** Which dist/ files are release assets. */
+function isReleaseAsset(name) {
+  return !/\.(blockmap|yaml|yml)$/.test(name);
+}
+
+module.exports = { notesRange, isReleaseAsset };
+
+// Only run the release when invoked as a script, so the helpers are testable.
+if (require.main !== module) return;
+
 
 const args = process.argv.slice(2);
 const get = (flag) => {
@@ -47,11 +74,17 @@ function generateNotes() {
       .trim().split('\n').filter(Boolean)[0] || '';
   } catch {}
 
-  const range = lastTag ? `${lastTag}..HEAD` : 'HEAD~20..HEAD';
+  const { range, limit } = notesRange(lastTag);
+  const count = limit ? `-n ${limit} ` : '';
   let notes = '';
   try {
-    notes = execSync(`git log --pretty=format:"- %s" ${range} -- "${appDir}/"`, { cwd: repoRoot, encoding: 'utf8' }).trim();
-  } catch {}
+    notes = execSync(`git log ${count}--pretty=format:"- %s" ${range} -- "${appDir}/"`,
+                     { cwd: repoRoot, encoding: 'utf8' }).trim();
+  } catch (e) {
+    // Recorded, not swallowed: an empty changelog on a release is the kind of
+    // thing nobody notices until they go looking for it later.
+    console.warn(`  could not read the log for ${range}: ${e.message.split('\n')[0]}`);
+  }
 
   return notes || `- ${productName} v${version} release`;
 }
@@ -72,8 +105,7 @@ const assets = fs.readdirSync(distDir)
   .filter(f => {
     const full = path.join(distDir, f);
     if (fs.statSync(full).isDirectory()) return false;
-    if (/\.(blockmap|yaml|yml)$/.test(f)) return false;
-    return true;
+    return isReleaseAsset(f);
   })
   .map(f => `"${path.join(distDir, f)}"`);
 
