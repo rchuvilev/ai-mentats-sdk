@@ -457,6 +457,12 @@ button.btn.danger:hover { background: #a93226; }
 .steps__body { padding: 0 16px 16px 54px; }
 .steps__body[hidden] { display: none; }
 
+/* A step whose body IS the product — an embedded UI rather than a form. Such a
+   body needs real height: .panel is height:100%, which resolves to nothing
+   inside an auto-height parent, so the iframe would collapse to zero. */
+.steps__body--fill { height: min(72vh, 760px); }
+.steps__body--fill > .panel { height: 100%; }
+
 /* One primary action per open step — the "make this done" button. Full width
    so there is never a question which control finishes the step. */
 .steps__action { margin-top: 14px; }
