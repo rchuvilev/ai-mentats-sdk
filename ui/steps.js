@@ -148,7 +148,10 @@
       /** Status text on the right of a header (e.g. "Running", "2.4 GB"). */
       setNote: function (id, text) {
         if (!items[id]) return;
-        items[id].head.querySelector('.steps__state').textContent = text || '';
+        var el = items[id].head.querySelector('.steps__state');
+        el.textContent = text || '';
+        // The note truncates, so the full text has to stay reachable.
+        el.title = text || '';
       },
     };
 
