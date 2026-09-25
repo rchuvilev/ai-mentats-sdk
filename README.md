@@ -1,4 +1,4 @@
-# ai-mentat-sdk
+# ai-mentats-sdk
 
 Shared logic, UI and utilities for the **ai-mentat** family of Electron apps.
 
@@ -66,7 +66,7 @@ node sdk/utils/bundle-electron.js /path    # or bundle a specific one
 The project directory is located by **walking up from this file** until a
 directory containing `electron-main.js` is found, so it is correct whether the
 SDK is mounted at `sdk/` as a submodule or installed at
-`node_modules/ai-mentat-sdk/`.
+`node_modules/ai-mentats-sdk/`.
 
 It used to default to `path.resolve(__dirname, '..')`, which was the repo root
 back when this file lived at `__shared__/scripts/` in the monorepo and is

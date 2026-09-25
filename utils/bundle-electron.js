@@ -26,7 +26,7 @@
  *
  * Hardcoding `'..', '..'` instead would just move the same assumption one
  * level: it would break again under a different mount point (an npm install
- * puts this at `node_modules/ai-mentat-sdk/utils/`). So the project is located
+ * puts this at `node_modules/ai-mentats-sdk/utils/`). So the project is located
  * by walking up from this file until a directory containing `electron-main.js`
  * is found, which is correct for both layouts and for any future one.
  */
@@ -86,7 +86,7 @@ function resolveProjectDir(o = {}) {
   if (o.arg) return path.resolve(o.arg);
 
   // Walk up from this file. `sdk/utils` -> `sdk` -> `<repo>` finds the repo in
-  // the submodule layout; `node_modules/ai-mentat-sdk/utils` -> ... -> `<repo>`
+  // the submodule layout; `node_modules/ai-mentats-sdk/utils` -> ... -> `<repo>`
   // finds it in the npm layout.
   let dir = path.resolve(startDir);
   for (;;) {

@@ -1,11 +1,11 @@
 {
-  "name": "ai-mentat-sdk",
+  "name": "ai-mentats-sdk",
   "version": "1.0.0",
   "description": "Shared logic, UI and utilities for the ai-mentat Electron apps.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hexstack-apps/ai-mentat-sdk.git"
+    "url": "https://github.com/rchuvilev/ai-mentats-sdk.git"
   },
   "main": "index.js",
   "files": [

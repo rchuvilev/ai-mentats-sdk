@@ -25,9 +25,9 @@ test('finds the repo root from the submodule layout', () => {
 });
 
 test('finds the repo root from the npm-install layout', () => {
-  // node_modules/ai-mentat-sdk/utils -> ... -> <repo>
+  // node_modules/ai-mentats-sdk/utils -> ... -> <repo>
   const dir = B.resolveProjectDir({
-    startDir: '/repo/node_modules/ai-mentat-sdk/utils',
+    startDir: '/repo/node_modules/ai-mentats-sdk/utils',
     cwd: '/somewhere/else',
     exists: only(path.join('/repo', B.ENTRY_NAME)),
   });

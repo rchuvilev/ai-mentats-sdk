@@ -1,5 +1,5 @@
 /**
- * ai-mentat-sdk — single entry point.
+ * ai-mentats-sdk — single entry point.
  *
  * Consumers vendor this repo as a git submodule at `sdk/` and require the
  * pieces they need. Scripts meant to be *run* (bundle-electron, publish,
