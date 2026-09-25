@@ -1,0 +1,24 @@
+{
+  "name": "ai-mentat-sdk",
+  "version": "1.0.0",
+  "description": "Shared logic, UI and utilities for the ai-mentat Electron apps.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hexstack-apps/ai-mentat-sdk.git"
+  },
+  "main": "index.js",
+  "files": [
+    "logic",
+    "ui",
+    "utils",
+    "build",
+    "vendor",
+    "test",
+    "index.js"
+  ],
+  "scripts": {
+    "test": "node --test 'utils/*.test.js' 'logic/*.test.js' 'ui/*.test.js'",
+    "test:mutation": "sh test/discriminates.sh"
+  }
+}
