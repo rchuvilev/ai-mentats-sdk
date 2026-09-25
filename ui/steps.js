@@ -43,7 +43,9 @@
     var openId = null;
 
     root.classList.add('steps');
-    root.innerHTML = '';
+    // Emptied by removal rather than innerHTML: this file never touches the
+    // HTML parser, which is what lets it run against a DOM stub in tests.
+    while (root.firstChild) root.removeChild(root.firstChild);
 
     defs.forEach(function (def, i) {
       var el = document.createElement('section');
@@ -56,18 +58,25 @@
       // A disabled button is skipped by the tab order, which is right: a step
       // that cannot be opened yet should not be a keyboard stop either.
       head.setAttribute('aria-expanded', 'false');
-      // Static skeleton only — the sole interpolation is the loop index. Every
-      // caller-supplied string (title, hint, and later setNote) goes in through
-      // textContent below, so a step titled `<img onerror=...>` is inert text.
-      head.innerHTML =
-        '<span class="steps__num">' + (i + 1) + '</span>' +
-        '<span class="steps__label">' +
-          '<span class="steps__title"></span>' +
-          (def.hint ? '<span class="steps__hint"></span>' : '') +
-        '</span>' +
-        '<span class="steps__state"></span>';
-      head.querySelector('.steps__title').textContent = def.title;
-      if (def.hint) head.querySelector('.steps__hint').textContent = def.hint;
+
+      // Built node by node rather than from an HTML string. Nothing here ever
+      // parses markup, so a step titled `<img onerror=...>` is inert text by
+      // construction rather than by remembering to use textContent — and the
+      // component becomes testable against a DOM stub that does not implement
+      // an HTML parser.
+      var span = function (cls, text) {
+        var el = document.createElement('span');
+        el.className = cls;
+        if (text !== undefined) el.textContent = text;
+        return el;
+      };
+      var num = span('steps__num', String(i + 1));
+      var label = span('steps__label');
+      label.appendChild(span('steps__title', def.title));
+      if (def.hint) label.appendChild(span('steps__hint', def.hint));
+      head.appendChild(num);
+      head.appendChild(label);
+      head.appendChild(span('steps__state'));
 
       var body = document.createElement('div');
       body.className = 'steps__body';
@@ -83,7 +92,8 @@
       el.appendChild(body);
       root.appendChild(el);
 
-      items[def.id] = { def: def, el: el, head: head, body: body, state: 'todo' };
+      items[def.id] = { def: def, el: el, head: head, body: body, state: 'todo',
+                        note: head.lastChild };
       order.push(def.id);
     });
 
@@ -133,8 +143,16 @@
         if (!items[id]) return;
         items[id].state = 'done';
         var next = order.find(function (x) { return items[x].state !== 'done'; });
-        if (next) api.open(next);
-        else render();          // everything done: collapse, open nothing
+        if (next) { api.open(next); }
+        else {
+          // Everything is done: collapse, open nothing. The comment said this
+          // already; the code only re-rendered, so the last completed step
+          // stayed open. A caller that WANTS a finished step to stay open uses
+          // setState(id, 'done'), which deliberately does not move openId —
+          // that is how ai-mentat-n8n keeps the n8n UI on screen.
+          openId = null;
+          render();
+        }
         return next || null;
       },
 
@@ -148,7 +166,7 @@
       /** Status text on the right of a header (e.g. "Running", "2.4 GB"). */
       setNote: function (id, text) {
         if (!items[id]) return;
-        var el = items[id].head.querySelector('.steps__state');
+        var el = items[id].note;
         el.textContent = text || '';
         // The note truncates, so the full text has to stay reachable.
         el.title = text || '';

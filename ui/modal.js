@@ -19,9 +19,15 @@
   var K = (window.HexKit = window.HexKit || {});
   var openEl = null;      // the backdrop currently on screen
   var lastFocus = null;
+  var restore = null;     // puts the caller's content node back where it was
 
   function close() {
     if (!openEl) return;
+    // Put the borrowed node back BEFORE tearing the dialog down. This used to
+    // be driven by a MutationObserver on document.body plus the deprecated
+    // DOMNodeRemovedFromDocument event — two mechanisms watching for something
+    // this function does itself, and one of them woke on every body mutation.
+    if (restore) { restore(); restore = null; }
     openEl.remove();
     openEl = null;
     document.removeEventListener('keydown', onKey, true);
@@ -92,23 +98,16 @@
     document.body.appendChild(back);
     openEl = back;
 
-    var restore = function () {
+    restore = function () {
       if (home && marker.parentNode) {
         content.hidden = true;
         home.replaceChild(content, marker);
       }
     };
-    // Restoring has to happen on every close path, not just the × button.
-    var origClose = close;
     document.addEventListener('keydown', onKey, true);
-    back.addEventListener('DOMNodeRemovedFromDocument', restore);
-    var observer = new MutationObserver(function () {
-      if (!document.body.contains(back)) { restore(); observer.disconnect(); }
-    });
-    observer.observe(document.body, { childList: true });
 
     x.focus();
-    return { close: origClose };
+    return { close: close };
   };
 
   K.closeModal = close;
