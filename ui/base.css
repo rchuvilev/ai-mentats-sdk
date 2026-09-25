@@ -116,7 +116,15 @@ input:focus { outline: none; border-color: #ff6d5a; }
 
 button.btn {
   background: #ff6d5a;
-  color: #fff;
+  /* Dark label, not white. White on #ff6d5a measures 2.77:1 — under the 4.5:1
+     AA floor — so every primary button in every app had an unreadable label.
+     The alternative, darkening the accent until white passes, only moves the
+     failure: at #c9442f white reaches 4.83:1 but the accent used AS TEXT on
+     the #1a1a2e ground falls to 3.53:1, and these apps colour tab labels and
+     headings with it. #1a1a2e on #ff6d5a is 6.16:1 and the accent stays
+     6.16:1 as text, so both directions clear AA and the brand hue is
+     unchanged. */
+  color: #1a1a2e;
   border: none;
   padding: 8px 18px;
   border-radius: 6px;
@@ -374,12 +382,130 @@ button.btn.danger:hover { background: #a93226; }
   border-bottom: 1px solid #2a2a4a;
   gap: 12px;
 }
-.top-bar__logo {
-  color: #8888aa;
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-.top-bar__logo:hover { color: #fff; }
 .top-bar__spacer { flex: 1; }
+
+
+/* ── Component kit: steps + modal ─────────────────────────────────────────
+ *
+ * The two pieces a single-screen, sequential flow needs and the tab shell
+ * cannot express. See ui/steps.js and ui/modal.js for the behaviour and for
+ * why a setup flow is an accordion rather than tabs.
+ *
+ * Colours are the ones already in this file (#1a1a2e ground, #2a2a3e borders,
+ * #ff6d5a accent). Body text is checked against the 4.5:1 AA floor on that
+ * ground, same as .loading-detail above.
+ */
+
+.steps { display: flex; flex-direction: column; gap: 10px; padding: 16px; overflow-y: auto; }
+
+.steps__item {
+  border: 1px solid #2a2a3e;
+  border-radius: 10px;
+  background: #1f1f33;
+  overflow: hidden;
+}
+.steps__item.is-open { border-color: #3a3a5a; }
+
+.steps__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* A step that is not its turn yet: legible, clearly not actionable. Muted
+   rather than hidden, so the whole path stays visible from the first screen. */
+.steps__head:disabled { cursor: default; opacity: .55; }
+.steps__head:not(:disabled):hover { background: #24243c; }
+
+.steps__num {
+  flex: 0 0 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: #2a2a3e;
+  color: #c7c7d9;
+}
+.is-open > .steps__head .steps__num { background: #ff6d5a; color: #1a1a2e; }
+.is-done > .steps__head .steps__num { background: #2d7d4f; color: #fff; }
+/* The tick replaces the number once a step is finished: the count stops
+   mattering the moment the answer is "done". */
+.is-done > .steps__head .steps__num { font-size: 0; }
+.is-done > .steps__head .steps__num::after { content: "\2713"; font-size: 14px; }
+
+.steps__label { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.steps__title { font-size: 14px; font-weight: 600; color: #e0e0e0; }
+.steps__hint { font-size: 12px; color: #9a9aa8; }   /* 6.15:1 on #1a1a2e */
+.steps__state { font-size: 12px; color: #9a9aa8; white-space: nowrap; }
+
+.steps__body { padding: 0 16px 16px 54px; }
+.steps__body[hidden] { display: none; }
+
+/* One primary action per open step — the "make this done" button. Full width
+   so there is never a question which control finishes the step. */
+.steps__action { margin-top: 14px; }
+.steps__action button.btn { width: 100%; padding: 11px 18px; font-size: 14px; }
+
+/* ── Modal ─────────────────────────────────────────────────────────────── */
+
+.modal-back {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(10, 10, 20, .68);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.modal {
+  width: min(680px, 100%);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: #1f1f33;
+  border: 1px solid #3a3a5a;
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .5);
+}
+.modal__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #2a2a3e;
+}
+.modal__title { flex: 1; font-size: 15px; font-weight: 600; color: #e0e0e0; }
+.modal__close {
+  background: none;
+  border: none;
+  color: #9a9aa8;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.modal__close:hover { color: #fff; }
+.modal__body { padding: 16px; overflow-y: auto; }
+
+/* Header affordance that opens one. Reference material does not deserve a
+   tab — a tab says "this is a step in the flow", and an FAQ is not. */
+.top-bar__icon {
+  -webkit-app-region: no-drag;
+  background: none;
+  border: 1px solid #2a2a3e;
+  border-radius: 6px;
+  color: #9a9aa8;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px 10px;
+}
+.top-bar__icon:hover { color: #fff; border-color: #3a3a5a; }
