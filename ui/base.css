@@ -218,14 +218,20 @@ button.btn.danger:hover { background: #a93226; }
 
 .loading-detail {
   font-size: 12px;
-  color: #666;
+  /* Contrast, not taste: on the #1a1a2d these apps paint, #666 measured
+     2.97:1 and #555 2.29:1 — both under the 4.5:1 WCAG AA floor for body
+     text, and this is the copy telling a first-run user what to do next.
+     #9a9aa8 is 6.15:1 and still reads as secondary against the #ccc
+     primary (10.64:1), so the hierarchy survives the fix. */
+  color: #9a9aa8;
 }
 .loading-detail--permanent {
+  color: #8b8b99;   /* 5.08:1 — dimmest tier that still clears AA */
   margin-top: 8px;
   max-width: 280px;
   text-align: center;
   line-height: 1.5;
-  color: #555;
+  color: #8b8b99;
 }
 
 .install-log {
@@ -238,7 +244,7 @@ button.btn.danger:hover { background: #a93226; }
   padding: 10px 12px;
   font-family: monospace;
   font-size: 11px;
-  color: #666;
+  color: #9a9aa8;
   white-space: pre-wrap;
   word-break: break-all;
   margin: 0;
