@@ -17,6 +17,13 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* The UA stylesheet gives [hidden] display:none, but ANY author rule with
+ * an explicit display beats it — .status-dot, .row and .pill all set one,
+ * so marking one of them hidden did nothing and the element stayed on
+ * screen. Making the attribute authoritative here means `el.hidden = true`
+ * behaves the way every caller already assumes it does. */
+[hidden] { display: none !important; }
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: #1a1a2e;
